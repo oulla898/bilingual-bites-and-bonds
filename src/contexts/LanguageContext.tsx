@@ -17,6 +17,7 @@ const translations = {
     "join": "Join",
     "post": "Post",
     "comment": "Comment",
+    "cancel": "Cancel",
   },
   ar: {
     "welcome": "مرحباً",
@@ -27,6 +28,7 @@ const translations = {
     "join": "انضم",
     "post": "نشر",
     "comment": "تعليق",
+    "cancel": "إلغاء",
   },
 };
 
