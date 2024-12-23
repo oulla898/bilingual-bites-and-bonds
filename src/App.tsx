@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import UserInfo from "./pages/UserInfo";
 import Index from "./pages/Index";
+import Food from "./pages/Food";
+import Activities from "./pages/Activities";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +30,8 @@ const App = () => {
               />
               <Route path="/user-info" element={<UserInfo />} />
               <Route path="/main" element={<Index />} />
+              <Route path="/food" element={<Food />} />
+              <Route path="/activities" element={<Activities />} />
             </Routes>
           </BrowserRouter>
         </TooltipProvider>

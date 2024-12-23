@@ -18,6 +18,14 @@ const translations = {
     "post": "Post",
     "comment": "Comment",
     "cancel": "Cancel",
+    "Back": "Back",
+    "Create Activity": "Create Activity",
+    "Posted by": "Posted by",
+    "participants": "participants",
+    "Success": "Success",
+    "Error": "Error",
+    "You have joined the activity": "You have joined the activity",
+    "Failed to join activity": "Failed to join activity"
   },
   ar: {
     "welcome": "مرحباً",
@@ -29,6 +37,14 @@ const translations = {
     "post": "نشر",
     "comment": "تعليق",
     "cancel": "إلغاء",
+    "Back": "رجوع",
+    "Create Activity": "إنشاء نشاط",
+    "Posted by": "نشر بواسطة",
+    "participants": "المشاركون",
+    "Success": "نجاح",
+    "Error": "خطأ",
+    "You have joined the activity": "لقد انضممت إلى النشاط",
+    "Failed to join activity": "فشل الانضمام إلى النشاط"
   },
 };
 
