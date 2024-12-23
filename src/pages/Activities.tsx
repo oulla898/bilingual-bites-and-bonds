@@ -14,6 +14,10 @@ const Activities = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
+  // Get the current user's ID from localStorage
+  const userData = localStorage.getItem("userData");
+  const userId = userData ? JSON.parse(userData).id : null;
+
   const { data: activities, isLoading: isLoadingActivities } = useQuery({
     queryKey: ["activities"],
     queryFn: async () => {
@@ -33,11 +37,23 @@ const Activities = () => {
   });
 
   const handleJoinActivity = async (activityId: string) => {
+    if (!userId) {
+      toast({
+        title: t("Error"),
+        description: t("You must be logged in to join activities"),
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       const { error } = await supabase
         .from("participants")
-        .insert({ post_id: activityId });
+        .insert({ 
+          post_id: activityId,
+          user_id: userId
+        });
 
       if (error) throw error;
 
