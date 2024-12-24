@@ -25,7 +25,16 @@ const translations = {
     "Success": "Success",
     "Error": "Error",
     "You have joined the activity": "You have joined the activity",
-    "Failed to join activity": "Failed to join activity"
+    "Failed to join activity": "Failed to join activity",
+    "Create": "Create",
+    "Creating...": "Creating...",
+    "Activity Title": "Activity Title",
+    "Activity Description": "Activity Description",
+    "Recipe Title": "Recipe Title",
+    "Recipe Description": "Recipe Description",
+    "Comments": "Comments",
+    "Write a comment...": "Write a comment...",
+    "Participants": "Participants"
   },
   ar: {
     "welcome": "مرحباً",
@@ -44,7 +53,16 @@ const translations = {
     "Success": "نجاح",
     "Error": "خطأ",
     "You have joined the activity": "لقد انضممت إلى النشاط",
-    "Failed to join activity": "فشل الانضمام إلى النشاط"
+    "Failed to join activity": "فشل الانضمام إلى النشاط",
+    "Create": "إنشاء",
+    "Creating...": "جاري الإنشاء...",
+    "Activity Title": "عنوان النشاط",
+    "Activity Description": "وصف النشاط",
+    "Recipe Title": "عنوان الوصفة",
+    "Recipe Description": "وصف الوصفة",
+    "Comments": "التعليقات",
+    "Write a comment...": "اكتب تعليقاً...",
+    "Participants": "المشاركون"
   },
 };
 

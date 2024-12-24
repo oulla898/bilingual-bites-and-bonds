@@ -1,74 +1,102 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useLanguage } from "@/contexts/LanguageContext";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
-import { LanguageSwitch } from "@/components/LanguageSwitch";
+import { useToast } from "@/components/ui/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const UserInfo = () => {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
-  const [step, setStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (step === 1 && name) {
-      // Here we would normally call the gender API
-      // For now, we'll just move to the next step
-      setStep(2);
-    } else if (step === 2 && age) {
-      const userData = {
+    setIsLoading(true);
+
+    try {
+      // Create an anonymous session
+      const { data: { user }, error: authError } = await supabase.auth.signUp({
+        email: `${Date.now()}@anonymous.com`,
+        password: `${Date.now()}${Math.random()}`,
+      });
+
+      if (authError) throw authError;
+      if (!user) throw new Error("No user returned from signup");
+
+      // Create profile
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .insert({
+          id: user.id,
+          name,
+          age: parseInt(age),
+        });
+
+      if (profileError) throw profileError;
+
+      // Store user data in localStorage
+      localStorage.setItem("userData", JSON.stringify({
+        id: user.id,
         name,
         age: parseInt(age),
-        gender: "male", // This would come from the API
-      };
-      localStorage.setItem("userData", JSON.stringify(userData));
+      }));
+
+      toast({
+        title: "Success",
+        description: "Profile created successfully!",
+      });
+
       navigate("/main");
+    } catch (error) {
+      console.error("Error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create profile",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <LanguageSwitch />
-      <Card className="w-full max-w-md p-6 space-y-6 animate-fade-in">
-        <h1 className="text-2xl font-bold text-center">
-          {t("welcome")}
-        </h1>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {step === 1 ? (
-            <div className="space-y-4">
-              <label className="block text-sm font-medium">
-                {t("enter.name")}
-              </label>
+    <div className="container mx-auto p-4 flex items-center justify-center min-h-screen">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>{t("welcome")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
               <Input
-                type="text"
+                placeholder={t("enter.name")}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className={language === "ar" ? "text-right" : "text-left"}
-                dir={language === "ar" ? "rtl" : "ltr"}
+                required
               />
             </div>
-          ) : (
-            <div className="space-y-4">
-              <label className="block text-sm font-medium">
-                {t("enter.age")}
-              </label>
+            <div>
               <Input
                 type="number"
+                placeholder={t("enter.age")}
                 value={age}
                 onChange={(e) => setAge(e.target.value)}
+                required
                 min="1"
                 max="120"
               />
             </div>
-          )}
-          <Button type="submit" className="w-full">
-            {step === 1 ? t("next") : t("finish")}
-          </Button>
-        </form>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Loading..." : t("join")}
+            </Button>
+          </form>
+        </CardContent>
       </Card>
     </div>
   );

@@ -7,26 +7,33 @@ import { useToast } from "@/components/ui/use-toast";
 import { Users, Plus, ArrowLeft } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 const Activities = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
 
-  // Get the current user's ID from localStorage
+  // Get current user data
   const userData = localStorage.getItem("userData");
-  const userId = userData ? JSON.parse(userData).id : null;
+  const currentUser = userData ? JSON.parse(userData) : null;
 
-  const { data: activities, isLoading: isLoadingActivities } = useQuery({
+  const { data: activities, refetch: refetchActivities } = useQuery({
     queryKey: ["activities"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("posts")
         .select(`
           *,
-          profiles:user_id(name),
-          participants(user_id)
+          profiles:profiles(name, age),
+          participants:participants(
+            profiles:profiles(name, age)
+          )
         `)
         .eq("type", "activity")
         .order("created_at", { ascending: false });
@@ -36,13 +43,50 @@ const Activities = () => {
     },
   });
 
-  const handleJoinActivity = async (activityId: string) => {
-    if (!userId) {
+  const handleCreateActivity = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser) {
+      navigate("/user-info");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from("posts")
+        .insert({
+          user_id: currentUser.id,
+          type: "activity",
+          title,
+          description,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: t("Success"),
+        description: "Activity created successfully!",
+      });
+
+      setTitle("");
+      setDescription("");
+      setShowCreateForm(false);
+      refetchActivities();
+    } catch (error) {
+      console.error("Error:", error);
       toast({
         title: t("Error"),
-        description: t("You must be logged in to join activities"),
+        description: "Failed to create activity",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleJoinActivity = async (activityId: string) => {
+    if (!currentUser) {
+      navigate("/user-info");
       return;
     }
 
@@ -52,7 +96,7 @@ const Activities = () => {
         .from("participants")
         .insert({ 
           post_id: activityId,
-          user_id: userId
+          user_id: currentUser.id
         });
 
       if (error) throw error;
@@ -61,6 +105,7 @@ const Activities = () => {
         title: t("Success"),
         description: t("You have joined the activity"),
       });
+      refetchActivities();
     } catch (error) {
       toast({
         title: t("Error"),
@@ -83,43 +128,82 @@ const Activities = () => {
           <ArrowLeft className="h-4 w-4" />
           {t("Back")}
         </Button>
-        <Button onClick={() => navigate("/activities/new")} className="flex items-center gap-2">
+        <Button 
+          onClick={() => setShowCreateForm(!showCreateForm)} 
+          className="flex items-center gap-2"
+        >
           <Plus className="h-4 w-4" />
-          {t("Create Activity")}
+          {showCreateForm ? "Cancel" : t("Create Activity")}
         </Button>
       </div>
 
-      {isLoadingActivities ? (
-        <div className="flex justify-center">Loading...</div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {activities?.map((activity) => (
-            <Card key={activity.id} className="animate-fade-in">
-              <CardHeader>
-                <CardTitle className="text-xl">{activity.title}</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  {t("Posted by")}: {activity.profiles?.name}
-                </p>
-              </CardHeader>
-              <CardContent>
-                <p className="mb-4">{activity.description}</p>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    <span>{activity.participants?.length || 0} {t("participants")}</span>
-                  </div>
-                  <Button
-                    onClick={() => handleJoinActivity(activity.id)}
-                    disabled={isLoading}
-                  >
-                    {t("Join")}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      {showCreateForm && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>{t("Create Activity")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleCreateActivity} className="space-y-4">
+              <Input
+                placeholder="Activity Title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+              />
+              <Textarea
+                placeholder="Activity Description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                required
+              />
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Creating..." : "Create"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {activities?.map((activity: any) => (
+          <Card key={activity.id} className="animate-fade-in">
+            <CardHeader>
+              <CardTitle className="text-xl">{activity.title}</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                {t("Posted by")}: {activity.profiles?.name} (Age: {activity.profiles?.age})
+              </p>
+            </CardHeader>
+            <CardContent>
+              <p className="mb-4">{activity.description}</p>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  <span>{activity.participants?.length || 0} {t("participants")}</span>
+                </div>
+                {activity.participants?.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="font-semibold">Participants:</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {activity.participants.map((participant: any, index: number) => (
+                        <span key={index} className="bg-muted px-2 py-1 rounded-md text-sm">
+                          {participant.profiles.name} (Age: {participant.profiles.age})
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <Button
+                  onClick={() => handleJoinActivity(activity.id)}
+                  disabled={isLoading}
+                  className="w-full"
+                >
+                  {t("Join")}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 };

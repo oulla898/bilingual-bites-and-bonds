@@ -7,16 +7,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 const Food = () => {
   const { t } = useLanguage();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [comment, setComment] = useState("");
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
 
-  // Fetch food posts
+  // Get current user data
+  const userData = localStorage.getItem("userData");
+  const currentUser = userData ? JSON.parse(userData) : null;
+
+  // Fetch food posts with participants
   const { data: posts, refetch: refetchPosts } = useQuery({
     queryKey: ["food-posts"],
     queryFn: async () => {
@@ -24,12 +30,15 @@ const Food = () => {
         .from("posts")
         .select(`
           *,
-          profiles:profiles(name),
+          profiles:profiles(name, age),
           comments:comments(
             id,
             content,
             created_at,
             profiles:profiles(name)
+          ),
+          participants:participants(
+            profiles:profiles(name, age)
           )
         `)
         .eq("type", "food")
@@ -43,19 +52,14 @@ const Food = () => {
   // Create a new food post
   const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({
-          title: "Error",
-          description: "You must be logged in to create a post",
-          variant: "destructive",
-        });
-        return;
-      }
+    if (!currentUser) {
+      navigate("/user-info");
+      return;
+    }
 
+    try {
       const { error } = await supabase.from("posts").insert({
-        user_id: user.id,
+        user_id: currentUser.id,
         type: "food",
         title,
         description,
@@ -81,22 +85,48 @@ const Food = () => {
     }
   };
 
+  // Join a food post
+  const handleJoinPost = async (postId: string) => {
+    if (!currentUser) {
+      navigate("/user-info");
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from("participants").insert({
+        post_id: postId,
+        user_id: currentUser.id,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Joined successfully!",
+      });
+
+      refetchPosts();
+    } catch (error) {
+      console.error("Error joining post:", error);
+      toast({
+        title: "Error",
+        description: "Failed to join",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Add a comment to a post
   const handleAddComment = async (postId: string) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({
-          title: "Error",
-          description: "You must be logged in to comment",
-          variant: "destructive",
-        });
-        return;
-      }
+    if (!currentUser) {
+      navigate("/user-info");
+      return;
+    }
 
+    try {
       const { error } = await supabase.from("comments").insert({
         post_id: postId,
-        user_id: user.id,
+        user_id: currentUser.id,
         content: comment,
       });
 
@@ -153,12 +183,31 @@ const Food = () => {
             <CardHeader>
               <CardTitle>{post.title}</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Posted by {post.profiles?.name}
+                Posted by {post.profiles?.name} (Age: {post.profiles?.age})
               </p>
             </CardHeader>
             <CardContent>
               <p className="whitespace-pre-wrap">{post.description}</p>
               
+              {/* Participants Section */}
+              <div className="mt-4">
+                <h4 className="font-semibold mb-2">Participants:</h4>
+                <div className="flex flex-wrap gap-2">
+                  {post.participants?.map((participant: any, index: number) => (
+                    <span key={index} className="bg-muted px-2 py-1 rounded-md text-sm">
+                      {participant.profiles.name} (Age: {participant.profiles.age})
+                    </span>
+                  ))}
+                </div>
+                <Button
+                  onClick={() => handleJoinPost(post.id)}
+                  className="mt-2"
+                  variant="outline"
+                >
+                  Join
+                </Button>
+              </div>
+
               {/* Comments Section */}
               <div className="mt-4 space-y-2">
                 <h4 className="font-semibold">Comments</h4>
